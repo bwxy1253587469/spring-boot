@@ -378,6 +378,7 @@ public class SpringApplication {
 		// <7> 加载 BeanDefinition 们
 		Set<Object> sources = getSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
+		// 加载BeanDefinitionReader
 		load(context, sources.toArray(new Object[sources.size()]));
 		// <8> 通知 SpringApplicationRunListener 的数组，Spring 容器加载完成。
 		listeners.contextLoaded(context);
@@ -611,10 +612,13 @@ public class SpringApplication {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void applyInitializers(ConfigurableApplicationContext context) {
+		// 遍历 ApplicationContextInitializer 数组
 		for (ApplicationContextInitializer initializer : getInitializers()) {
+			// 校验 ApplicationContextInitializer 的泛型非空
 			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(
 					initializer.getClass(), ApplicationContextInitializer.class);
 			Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+			// 初始化 ApplicationContextInitializer
 			initializer.initialize(context);
 		}
 	}

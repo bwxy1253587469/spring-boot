@@ -16,12 +16,6 @@
 
 package org.springframework.boot.context.properties;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -29,6 +23,12 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodCallback;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Utility class to memorize {@code @Bean} definition meta data during initialization of
@@ -46,11 +46,16 @@ public class ConfigurationBeanFactoryMetaData implements BeanFactoryPostProcesso
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
 			throws BeansException {
+		// <1> 初始化 beanFactory 属性
 		this.beanFactory = beanFactory;
+		// <2> 遍历所有的 BeanDefinition 的名字们
 		for (String name : beanFactory.getBeanDefinitionNames()) {
+			// <2.1> 获得 BeanDefinition 对象
 			BeanDefinition definition = beanFactory.getBeanDefinition(name);
+			// <2.2> 获得 method、bean 属性
 			String method = definition.getFactoryMethodName();
 			String bean = definition.getFactoryBeanName();
+			// <2.3> 添加到 beansFactoryMetadata 中
 			if (method != null && bean != null) {
 				this.beans.put(name, new MetaData(bean, method));
 			}

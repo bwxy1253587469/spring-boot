@@ -16,9 +16,6 @@
 
 package org.springframework.boot.context.properties;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -29,6 +26,9 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Import selector that sets up binding of external properties to configuration classes
@@ -63,6 +63,7 @@ class EnableConfigurationPropertiesImportSelector implements ImportSelector {
 
 	/**
 	 * {@link ImportBeanDefinitionRegistrar} for configuration properties support.
+	 * 将 @EnableConfigurationProperties 注解指定的类，逐个注册成对应的 BeanDefinition 对象。
 	 */
 	public static class ConfigurationPropertiesBeanRegistrar
 			implements ImportBeanDefinitionRegistrar {
@@ -70,14 +71,18 @@ class EnableConfigurationPropertiesImportSelector implements ImportSelector {
 		@Override
 		public void registerBeanDefinitions(AnnotationMetadata metadata,
 				BeanDefinitionRegistry registry) {
+			// 获得 @EnableConfigurationProperties 注解
 			MultiValueMap<String, Object> attributes = metadata
 					.getAllAnnotationAttributes(
 							EnableConfigurationProperties.class.getName(), false);
+			// 获得 value 属性
 			List<Class<?>> types = collectClasses(attributes.get("value"));
 			for (Class<?> type : types) {
 				String prefix = extractPrefix(type);
+				// <2.1> 通过 @ConfigurationProperties 注解，获得最后要生成的 BeanDefinition 的名字。格式为 prefix-类全名 or 类全名
 				String name = (StringUtils.hasText(prefix) ? prefix + "-" + type.getName()
 						: type.getName());
+				// <2.2> 判断是否已经有该名字的 BeanDefinition 的名字。没有，才进行注册
 				if (!registry.containsBeanDefinition(name)) {
 					registerBeanDefinition(registry, type, name);
 				}
@@ -107,11 +112,14 @@ class EnableConfigurationPropertiesImportSelector implements ImportSelector {
 
 		private void registerBeanDefinition(BeanDefinitionRegistry registry,
 				Class<?> type, String name) {
+			// 创建 GenericBeanDefinition 对象
 			BeanDefinitionBuilder builder = BeanDefinitionBuilder
 					.genericBeanDefinition(type);
 			AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
+			// 注册到 BeanDefinitionRegistry 中
 			registry.registerBeanDefinition(name, beanDefinition);
 
+			// 断言，判断该类有 @ConfigurationProperties 注解
 			ConfigurationProperties properties = AnnotationUtils.findAnnotation(type,
 					ConfigurationProperties.class);
 			Assert.notNull(properties,

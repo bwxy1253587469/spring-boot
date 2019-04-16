@@ -77,12 +77,17 @@ class BeanDefinitionLoader {
 	BeanDefinitionLoader(BeanDefinitionRegistry registry, Object... sources) {
 		Assert.notNull(registry, "Registry must not be null");
 		Assert.notEmpty(sources, "Sources must not be empty");
+		// 它来自方法参数 Object... sources ，来自 SpringApplication#getAllSources() 方法，
 		this.sources = sources;
+		// 创建 AnnotatedBeanDefinitionReader 对象
 		this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
+		// 创建 XmlBeanDefinitionReader 对象
 		this.xmlReader = new XmlBeanDefinitionReader(registry);
+		// 创建 GroovyBeanDefinitionReader 对象
 		if (isGroovyPresent()) {
 			this.groovyReader = new GroovyBeanDefinitionReader(registry);
 		}
+		// 创建 ClassPathBeanDefinitionScanner 对象
 		this.scanner = new ClassPathBeanDefinitionScanner(registry);
 		this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
 	}
@@ -131,15 +136,19 @@ class BeanDefinitionLoader {
 
 	private int load(Object source) {
 		Assert.notNull(source, "Source must not be null");
+		// <1> 如果是 Class 类型，则使用 AnnotatedBeanDefinitionReader 执行加载
 		if (source instanceof Class<?>) {
 			return load((Class<?>) source);
 		}
+		// <2> 如果是 Resource 类型，则使用 XmlBeanDefinitionReader 执行加载
 		if (source instanceof Resource) {
 			return load((Resource) source);
 		}
+		// <3> 如果是 Package 类型，则使用 ClassPathBeanDefinitionScanner 执行加载
 		if (source instanceof Package) {
 			return load((Package) source);
 		}
+		// <4> 如果是 CharSequence 类型，则各种尝试去加载
 		if (source instanceof CharSequence) {
 			return load((CharSequence) source);
 		}

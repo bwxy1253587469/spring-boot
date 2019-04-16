@@ -112,9 +112,12 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	 */
 	@Override
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		// <1.1> 注册 WebApplicationContextServletContextAwareProcessor
 		beanFactory.addBeanPostProcessor(
 				new WebApplicationContextServletContextAwareProcessor(this));
+		// <1.2> 忽略 ServletContextAware 接口。
 		beanFactory.ignoreDependencyInterface(ServletContextAware.class);
+		// <2> 注册 ExistingWebApplicationScopes
 		registerWebApplicationScopes();
 	}
 
@@ -133,6 +136,7 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	protected void onRefresh() {
 		super.onRefresh();
 		try {
+			// 创建web容器
 			createEmbeddedServletContainer();
 		}
 		catch (Throwable ex) {
@@ -143,8 +147,11 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 
 	@Override
 	protected void finishRefresh() {
+		// <1> 调用父方法
 		super.finishRefresh();
+		// <2> 启动 WebServer
 		EmbeddedServletContainer localContainer = startEmbeddedServletContainer();
+		// <3> 如果创建 WebServer 成功，发布 ServletWebServerInitializedEvent 事件
 		if (localContainer != null) {
 			publishEvent(
 					new EmbeddedServletContainerInitializedEvent(this, localContainer));
@@ -153,6 +160,7 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 
 	@Override
 	protected void onClose() {
+		// 调用父方法
 		super.onClose();
 		stopAndReleaseEmbeddedServletContainer();
 	}
@@ -160,8 +168,12 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	private void createEmbeddedServletContainer() {
 		EmbeddedServletContainer localContainer = this.embeddedServletContainer;
 		ServletContext localServletContext = getServletContext();
+		// <1> 如果 webServer 为空，说明未初始化
 		if (localContainer == null && localServletContext == null) {
+			// <1.1> 获得 EmbeddedServletContainerFactory 对象
 			EmbeddedServletContainerFactory containerFactory = getEmbeddedServletContainerFactory();
+			// <1.2> 获得 ServletContextInitializer 对象
+			// <1.3> 创建（获得） WebServer 对象
 			this.embeddedServletContainer = containerFactory
 					.getEmbeddedServletContainer(getSelfInitializer());
 		}
@@ -185,19 +197,24 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	 */
 	protected EmbeddedServletContainerFactory getEmbeddedServletContainerFactory() {
 		// Use bean names so that we don't consider the hierarchy
+		// 获得 EmbeddedServletContainerFactory 类型对应的 Bean 的名字们
 		String[] beanNames = getBeanFactory()
 				.getBeanNamesForType(EmbeddedServletContainerFactory.class);
+		// 如果是 0 个，抛出 ApplicationContextException 异常，因为至少要一个
 		if (beanNames.length == 0) {
 			throw new ApplicationContextException(
 					"Unable to start EmbeddedWebApplicationContext due to missing "
 							+ "EmbeddedServletContainerFactory bean.");
 		}
+		// 如果是 > 1 个，抛出 ApplicationContextException 异常，因为不知道初始化哪个
 		if (beanNames.length > 1) {
 			throw new ApplicationContextException(
 					"Unable to start EmbeddedWebApplicationContext due to multiple "
 							+ "EmbeddedServletContainerFactory beans : "
 							+ StringUtils.arrayToCommaDelimitedString(beanNames));
 		}
+		// 获得 EmbeddedServletContainerFactory 类型对应的 Bean 对象
+		// 当引入tomcat-starter时，是TomcatEmbeddedServletContainerFactory
 		return getBeanFactory().getBean(beanNames[0],
 				EmbeddedServletContainerFactory.class);
 	}
@@ -218,10 +235,14 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	}
 
 	private void selfInitialize(ServletContext servletContext) throws ServletException {
+		// <1> 添加 Spring 容器到 servletContext 属性中。
 		prepareEmbeddedWebApplicationContext(servletContext);
+		// <2> 注册 ServletContextScope
 		registerApplicationScope(servletContext);
+		// <3> 注册 web-specific environment beans ("contextParameters", "contextAttributes")
 		WebApplicationContextUtils.registerEnvironmentBeans(getBeanFactory(),
 				servletContext);
+		// <4> 获得所有 ServletContextInitializer ，并逐个进行启动
 		for (ServletContextInitializer beans : getServletContextInitializerBeans()) {
 			beans.onStartup(servletContext);
 		}
@@ -260,19 +281,24 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 	 * @param servletContext the operational servlet context
 	 */
 	protected void prepareEmbeddedWebApplicationContext(ServletContext servletContext) {
+		// 如果已经在 ServletContext 中，则根据情况进行判断。
 		Object rootContext = servletContext.getAttribute(
 				WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE);
 		if (rootContext != null) {
+			// 如果是相同容器，抛出 IllegalStateException 异常。说明可能有重复的 ServletContextInitializers 。
 			if (rootContext == this) {
 				throw new IllegalStateException(
 						"Cannot initialize context because there is already a root application context present - "
 								+ "check whether you have multiple ServletContextInitializers!");
 			}
+			// 如果不同容器，则直接返回。
 			return;
 		}
+		// 开始初始化嵌入式容器
 		Log logger = LogFactory.getLog(ContextLoader.class);
 		servletContext.log("Initializing Spring embedded WebApplicationContext");
 		try {
+			// <X> 设置当前 Spring 容器到 ServletContext 中
 			servletContext.setAttribute(
 					WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this);
 			if (logger.isDebugEnabled()) {
@@ -281,6 +307,7 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 								+ WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE
 								+ "]");
 			}
+			// <Y> 设置到 `servletContext` 属性中。
 			setServletContext(servletContext);
 			if (logger.isInfoEnabled()) {
 				long elapsedTime = System.currentTimeMillis() - getStartupDate();
@@ -314,7 +341,9 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 		EmbeddedServletContainer localContainer = this.embeddedServletContainer;
 		if (localContainer != null) {
 			try {
+				// 停止 WebServer 对象
 				localContainer.stop();
+				// 置空 webServer
 				this.embeddedServletContainer = null;
 			}
 			catch (Exception ex) {
