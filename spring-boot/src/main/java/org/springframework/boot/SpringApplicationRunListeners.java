@@ -16,15 +16,14 @@
 
 package org.springframework.boot;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
-
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.util.ReflectionUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * A collection of {@link SpringApplicationRunListener}.
@@ -44,6 +43,7 @@ class SpringApplicationRunListeners {
 	}
 
 	public void starting() {
+		// 发布ApplicationStartedEvent事件
 		for (SpringApplicationRunListener listener : this.listeners) {
 			listener.starting();
 		}

@@ -248,7 +248,7 @@ public class SpringApplication {
 		}
 		// 推演是否是web环境
 		this.webEnvironment = deduceWebEnvironment();
-		// 设置初始化 ApplicationContextInitializer
+		// 设置初始化 ApplicationContextInitializer 主要是在spring容器启动之前（refresh方法前）调用
 		setInitializers((Collection) getSpringFactoriesInstances(
 				ApplicationContextInitializer.class));
 		// // 初始化 listeners 属性
@@ -256,6 +256,12 @@ public class SpringApplication {
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
+	/**
+	 * 根据当前环境是否能够加载"javax.servlet.Servlet",
+	 "org.springframework.web.context.ConfigurableWebApplicationContext"
+	 * 判断当前环境是否是web项目
+	 * @return
+	 */
 	private boolean deduceWebEnvironment() {
 		for (String className : WEB_ENVIRONMENT_CLASSES) {
 			if (!ClassUtils.isPresent(className, null)) {
@@ -297,8 +303,10 @@ public class SpringApplication {
 		//  配置 headless 属性
 		configureHeadlessProperty();
 		// 获得 SpringApplicationRunListener 的数组，并启动监听
-		SpringApplicationRunListeners listeners = getRunListeners(args);
 		// 其实就是将监听器放到SimpleApplicationEventMulticaster对象中
+		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 发布ApplicationStartedEvent事件
+		// 其实就是执行org.springframework.context.ApplicationListener.onApplicationEvent#onApplicationEvent方法
 		listeners.starting();
 		try {
 			// 创建  ApplicationArguments 对象
@@ -396,6 +404,9 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * Headless模式是系统的一种配置模式。在系统可能缺少显示设备、键盘或鼠标这些外设的情况下可以使用该模式。
+	 */
 	private void configureHeadlessProperty() {
 		System.setProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS, System.getProperty(
 				SYSTEM_PROPERTY_JAVA_AWT_HEADLESS, Boolean.toString(this.headless)));
@@ -403,6 +414,8 @@ public class SpringApplication {
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		// 实现类org.springframework.boot.context.event.EventPublishingRunListener
+		// 在实例化的时候 会将ApplicationListener的实现类作为参数
 		return new SpringApplicationRunListeners(logger, getSpringFactoriesInstances(
 				SpringApplicationRunListener.class, types, this, args));
 	}
@@ -413,6 +426,7 @@ public class SpringApplication {
 
 	private <T> Collection<? extends T> getSpringFactoriesInstances(Class<T> type,
 			Class<?>[] parameterTypes, Object... args) {
+		// 获取当前线程的classLoader
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 		// Use names and ensure unique to protect against duplicates
 		// <1> 加载指定类型对应的，在 `META-INF/spring.factories` 里的类名的数组
