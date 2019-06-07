@@ -16,10 +16,6 @@
 
 package org.springframework.boot.context.config;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContextException;
 import org.springframework.context.ApplicationContextInitializer;
@@ -31,6 +27,10 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * {@link ApplicationContextInitializer} that delegates to other initializers that are
@@ -50,6 +50,8 @@ public class DelegatingApplicationContextInitializer implements
 
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
+		// 读取properties/yaml/args等参数 key为context.initializer.classes的values
+		// 提供SPI外的另一种注册方式
 		ConfigurableEnvironment environment = context.getEnvironment();
 		List<Class<?>> initializerClasses = getInitializerClasses(environment);
 		if (!initializerClasses.isEmpty()) {

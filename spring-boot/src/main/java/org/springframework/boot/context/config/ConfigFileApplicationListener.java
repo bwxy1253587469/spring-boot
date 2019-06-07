@@ -16,20 +16,7 @@
 
 package org.springframework.boot.context.config;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -66,6 +53,18 @@ import org.springframework.util.Assert;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 /**
  * {@link EnvironmentPostProcessor} that configures the context environment by loading
@@ -173,11 +172,20 @@ public class ConfigFileApplicationListener
 		}
 	}
 
+	/**
+	 * ConfigFileApplicationListener是load配置文件的
+	 * CloudFoundryVcapEnvironmentPostProcessor 云服务配置支持
+	 * @param event
+	 */
 	private void onApplicationEnvironmentPreparedEvent(
 			ApplicationEnvironmentPreparedEvent event) {
+		// 加载EnvironmentPostProcessor的实现类
 		List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
+		// 把自己也加进去
 		postProcessors.add(this);
+		// 排序
 		AnnotationAwareOrderComparator.sort(postProcessors);
+		// 调用后置处理
 		for (EnvironmentPostProcessor postProcessor : postProcessors) {
 			postProcessor.postProcessEnvironment(event.getEnvironment(),
 					event.getSpringApplication());
@@ -192,6 +200,7 @@ public class ConfigFileApplicationListener
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment,
 			SpringApplication application) {
+		// 添加属性源
 		addPropertySources(environment, application.getResourceLoader());
 		configureIgnoreBeanInfo(environment);
 		bindToSpringApplication(environment, application);
@@ -221,6 +230,7 @@ public class ConfigFileApplicationListener
 	 */
 	protected void addPropertySources(ConfigurableEnvironment environment,
 			ResourceLoader resourceLoader) {
+		// 添加随机的属性源
 		RandomValuePropertySource.addToEnvironment(environment);
 		new Loader(environment, resourceLoader).load();
 	}
@@ -357,6 +367,7 @@ public class ConfigFileApplicationListener
 			// Pre-existing active profiles set via Environment.setActiveProfiles()
 			// are additional profiles and config files are allowed to add more if
 			// they want to, so don't call addActiveProfiles() here.
+			// 初始化激活 环境profiles（dev prod等）
 			Set<Profile> initialActiveProfiles = initializeActiveProfiles();
 			this.profiles.addAll(getUnprocessedActiveProfiles(initialActiveProfiles));
 			if (this.profiles.isEmpty()) {

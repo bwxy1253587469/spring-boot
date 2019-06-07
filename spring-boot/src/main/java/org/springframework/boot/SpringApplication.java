@@ -243,16 +243,21 @@ public class SpringApplication {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void initialize(Object[] sources) {
+		// 1. 加入source中
 		if (sources != null && sources.length > 0) {
 			this.sources.addAll(Arrays.asList(sources));
 		}
-		// 推演是否是web环境
+		// 2. 推演是否是web环境
 		this.webEnvironment = deduceWebEnvironment();
-		// 设置初始化 ApplicationContextInitializer 主要是在spring容器启动之前（refresh方法前）调用
+		// 3. 设置初始化 ApplicationContextInitializer 主要是在spring容器启动之前（refresh方法前）调用
+		// 该接口典型的应用场景是web应用中需要编程方式对应用上下文做初始化。Apollo配置中心client就通过实现这个类 注入
+		// 比如，注册属性源(property sources)或者针对上下文的环境信息environment激活相应的profile。
 		setInitializers((Collection) getSpringFactoriesInstances(
 				ApplicationContextInitializer.class));
-		// // 初始化 listeners 属性
+		// 4. 初始化 listeners 属性
+		// 设置Application监听器
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+		// 5. 获取main方法
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
@@ -295,40 +300,44 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
-		// <1> 创建 StopWatch 对象，并启动。StopWatch 主要用于简单统计 run 启动过程的时长。
+		// 1. 创建 StopWatch 对象，并启动。StopWatch 主要用于简单统计 run 启动过程的时长。
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		FailureAnalyzers analyzers = null;
-		//  配置 headless 属性
+		// 2. 配置 headless 属性
 		configureHeadlessProperty();
 		// 获得 SpringApplicationRunListener 的数组，并启动监听
 		// 其实就是将监听器放到SimpleApplicationEventMulticaster对象中
+		// SpringApplication运行过程中的每个状态都发布事件 做一些事情
 		SpringApplicationRunListeners listeners = getRunListeners(args);
 		// 发布ApplicationStartedEvent事件
 		// 其实就是执行org.springframework.context.ApplicationListener.onApplicationEvent#onApplicationEvent方法
+		// 3. 发布ApplicationStartedEvent事件
 		listeners.starting();
 		try {
-			// 创建  ApplicationArguments 对象
+			// 4. 创建  ApplicationArguments 对象 他持有args参数，也就是main函数传进来的参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(
 					args);
 			// 加载属性配置。执行完成后，所有的 environment 的属性都会加载进来，包括 application.properties 和外部的属性配置
 			ConfigurableEnvironment environment = prepareEnvironment(listeners,
 					applicationArguments);
-			// <5> 打印 Spring Banner
+			// 5. 打印 Spring Banner
 			Banner printedBanner = printBanner(environment);
-			// <6> 创建 Spring 容器。
+			// 6. 创建 Spring 容器。 实例化DefaultListableBeanFactory/添加注解处理器的bean定义
 			context = createApplicationContext();
-			// <7> 异常报告器
+			// 7. 异常报告器
 			analyzers = new FailureAnalyzers(context);
-			// 主要是调用所有初始化类的 initialize 方法
+			// 8. 主要是调用所有初始化类的 initialize 方法
 			prepareContext(context, environment, listeners, applicationArguments,
 					printedBanner);
-			// 初始化 Spring 容器。
+			// 9. 初始化 Spring 容器。 调⽤用AbstractApplicationContext#refresh⽅方法,并注册钩⼦子
 			refreshContext(context);
-			// <10> 执行 Spring 容器的初始化的后置逻辑。默认实现为空。
+			// 10. 执行 Spring 容器的初始化的后置逻辑。默认实现为空。 在容器器完成刷新后，依次调用注册的Runners
 			afterRefresh(context, applicationArguments);
+			// 11. 发布ApplicationReadyEvent事件
 			listeners.finished(context, null);
+			// 12. 计时结束
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass)
@@ -337,6 +346,7 @@ public class SpringApplication {
 			return context;
 		}
 		catch (Throwable ex) {
+			// 13. 初始化出现异常
 			handleRunFailure(context, listeners, analyzers, ex);
 			throw new IllegalStateException(ex);
 		}
@@ -346,10 +356,12 @@ public class SpringApplication {
 			SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
 		// Create and configure the environment
-		// <1> 创建 ConfigurableEnvironment 对象，并进行配置
+		// 1 创建 ConfigurableEnvironment 对象，并进行配置
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
+		// 2. 配置环境信息
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
-		// <2> 通知 SpringApplicationRunListener 的数组，环境变量已经准备完成。
+		// 3 通知 SpringApplicationRunListener 的数组，环境变量已经准备完成。
+		// 也就是通知监听者 环境已经准备好
 		listeners.environmentPrepared(environment);
 		if (!this.webEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader())
@@ -358,44 +370,58 @@ public class SpringApplication {
 		return environment;
 	}
 
+	/**
+	 * 会初始化一些bean并添加到容器中
+	 * @param context
+	 * @param environment
+	 * @param listeners
+	 * @param applicationArguments
+	 * @param printedBanner
+	 */
 	private void prepareContext(ConfigurableApplicationContext context,
 			ConfigurableEnvironment environment, SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments, Banner printedBanner) {
-		// <1> 设置 context 的 environment 属性
+		// 1 设置 context 的 environment 属性 这里是StandardServletEnvironment
 		context.setEnvironment(environment);
-		// <2> 设置 context 的一些属性
+		// 2 设置 context beanNameGenerator和resourceLoader
 		postProcessApplicationContext(context);
-		// <3> 初始化 ApplicationContextInitializer
+		// 3 拿到之前实例例化SpringApplication对象的时候设置的ApplicationContextInitializer，调用它们的initialize方法，对上下文做初始化
+		// org.springframework.boot.SpringApplication.initialize SPI的方式设置 实例化
 		applyInitializers(context);
-		// <4> 通知 SpringApplicationRunListener 的数组，Spring 容器准备完成。
+		// 4 通知 SpringApplicationRunListener 的数组，Spring 容器准备完成。 空实现
 		listeners.contextPrepared(context);
+		// 5 打印启动日志
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
 
 		// Add boot specific singleton beans
-		// <6> 设置 beanFactory 的属性 添加一些特殊的bean
+		// 6 设置 beanFactory 的属性 添加一些特殊的bean
+		// 往上下⽂文的beanFactory中注册一个singleton的bean，bean的名字是springApplicationArguments，bean的实例是之前实例例化的ApplicationArguments对象
 		context.getBeanFactory().registerSingleton("springApplicationArguments",
 				applicationArguments);
 		if (printedBanner != null) {
+			// 如果之前获取的printedBanner不不为空，那么往上下文的beanFactory中注册一个singleton的bean，bean的名字是springBootBanner，bean的实例例就是这个printedBanner
 			context.getBeanFactory().registerSingleton("springBootBanner", printedBanner);
 		}
 
 		// Load the sources
-		// <7> 加载 BeanDefinition 们
 		Set<Object> sources = getSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
 		// 加载BeanDefinitionReader
+		// 7. 调用load⽅方法注册启动类的bean定义，也就是调用SpringApplication.run(Application.class, args);的类，SpringApplication的load方法内会创建BeanDefinitionLoader的对象，并调⽤用它的load()⽅方法
 		load(context, sources.toArray(new Object[sources.size()]));
-		// <8> 通知 SpringApplicationRunListener 的数组，Spring 容器加载完成。
+		// 8. 调用listeners的contextLoaded方法，说明上下文已经加载，该方法先找到所有的ApplicationListener，遍历这些listener，如果该listener继承了了ApplicationContextAware类，那么在这⼀一步会调⽤用它的setApplicationContext⽅方法，设置context
 		listeners.contextLoaded(context);
 	}
 
 	private void refreshContext(ConfigurableApplicationContext context) {
+		// 调用abstractApplication#refresh完成初始化
 		refresh(context);
 		if (this.registerShutdownHook) {
 			try {
+				// 注册⼀一个关闭容器器时的钩⼦子函数,如果registerShutdownHook 为true的话,默认是true.
 				context.registerShutdownHook();
 			}
 			catch (AccessControlException ex) {
@@ -416,6 +442,7 @@ public class SpringApplication {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
 		// 实现类org.springframework.boot.context.event.EventPublishingRunListener
 		// 在实例化的时候 会将ApplicationListener的实现类作为参数
+		// SpringApplicationRunListener这个类应该叫事件发布器，不应该叫监听器
 		return new SpringApplicationRunListeners(logger, getSpringFactoriesInstances(
 				SpringApplicationRunListener.class, types, this, args));
 	}
@@ -601,6 +628,7 @@ public class SpringApplication {
 	 * @param context the application context
 	 */
 	protected void postProcessApplicationContext(ConfigurableApplicationContext context) {
+		// BeanNameGenerator为BeanDefinition生成Bean名称
 		if (this.beanNameGenerator != null) {
 			context.getBeanFactory().registerSingleton(
 					AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR,
@@ -690,17 +718,22 @@ public class SpringApplication {
 			logger.debug(
 					"Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
 		}
+		// 1. 实例化BeanDefinitionLoader
 		BeanDefinitionLoader loader = createBeanDefinitionLoader(
 				getBeanDefinitionRegistry(context), sources);
+		// 2. 如果当前的beanNameGenerator 不为null的话,就将SpringApplication中的beanNameGenerator赋值给BeanDefinitionLoader
 		if (this.beanNameGenerator != null) {
 			loader.setBeanNameGenerator(this.beanNameGenerator);
 		}
+		// 3. 如果当前的resourceLoader 不为null的话,就将SpringApplication中的resourceLoader赋值给BeanDefinitionLoader
 		if (this.resourceLoader != null) {
 			loader.setResourceLoader(this.resourceLoader);
 		}
+		// 4. 如果当前的environment 不为null的话,就将SpringApplication中的environment赋值给BeanDefinitionLoader
 		if (this.environment != null) {
 			loader.setEnvironment(this.environment);
 		}
+		// 5. 加载启动类（springApplication）这个bean的定义
 		loader.load();
 	}
 

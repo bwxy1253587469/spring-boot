@@ -102,6 +102,7 @@ public class ContextIdApplicationContextInitializer implements
 
 	@Override
 	public void initialize(ConfigurableApplicationContext applicationContext) {
+		// 设置applicationContext上下文的ID
 		applicationContext.setId(getApplicationId(applicationContext.getEnvironment()));
 	}
 

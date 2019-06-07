@@ -49,6 +49,42 @@ class SpringApplicationRunListeners {
 		}
 	}
 
+	/**
+	 * ParentContextCloserApplicationListener
+	 * 容器关闭时发出通知，如果父容器关闭，那么自容器也一起关闭
+	 *
+	 * FileEncodingApplicationListener（参数spring.mandatory-file-encoding）
+	 * 在springboot环境准备完成以后运行，获取环境中的系统环境参数，检测当前系统环境的file.encoding和spring.mandatory-file-encoding设置的值是否一样,如果不一样则抛出异常
+	 * 如果不配置spring.mandatory-file-encoding则不检查
+	 *
+	 * AnsiOutputApplicationListener（参数spring.output.ansi.enabled）
+	 * 在springboot环境准备完成以后运行，
+	 * 如果你的终端支持ANSI，设置彩色输出会让日志更具可读性。
+	 *
+	 * ConfigFileApplicationListener
+	 * 重要（读取加载springboot配置文件）
+	 *
+	 * DelegatingApplicationListener（参数context.listener.classes）
+	 * 可以在配置文件中指定ApplicationListener的实现类 https://www.jb51.net/article/124391.htm
+	 * 把Listener转发给配置的这些class处理，这样可以支持外围代码不去写spring.factories中的org.springframework.context.ApplicationListener相关配置，保持springboot原来代码的稳定
+	 *
+	 * LiquibaseServiceLocatorApplicationListener（参数liquibase.servicelocator.ServiceLocator）
+	 * 如果存在，则使用springboot相关的版本进行替代
+	 *
+	 * ClasspathLoggingApplicationListener
+	 * 程序启动时，讲classpath打印到debug日志，启动失败时classpath打印到info日志
+	 * LoggingApplicationListener
+	 * 根据配置初始化日志系统log
+	 *
+	 * org.springframework.boot.autoconfigure.BackgroundPreinitializer
+	 * 触发更早的初始化 异步运行
+	 * ---------------------
+	 * 作者：oldflame-Jm
+	 * 来源：CSDN
+	 * 原文：https://blog.csdn.net/jamet/article/details/78042486
+	 * 版权声明：本文为博主原创文章，转载请附上博文链接！
+	 * @param environment
+	 */
 	public void environmentPrepared(ConfigurableEnvironment environment) {
 		for (SpringApplicationRunListener listener : this.listeners) {
 			listener.environmentPrepared(environment);

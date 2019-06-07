@@ -16,17 +16,8 @@
 
 package org.springframework.boot.bind;
 
-import java.beans.PropertyDescriptor;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.FactoryBean;
@@ -45,6 +36,14 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.DataBinder;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.Validator;
+
+import java.beans.PropertyDescriptor;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * Validate some {@link Properties} (or optionally {@link PropertySources}) by binding
@@ -260,6 +259,7 @@ public class PropertiesConfigurationFactory<T> implements FactoryBean<T>,
 	}
 
 	private void doBindPropertiesToTarget() throws BindException {
+		// 1. 实例化
 		RelaxedDataBinder dataBinder = (this.targetName != null)
 				? new RelaxedDataBinder(this.target, this.targetName)
 				: new RelaxedDataBinder(this.target);
@@ -274,6 +274,7 @@ public class PropertiesConfigurationFactory<T> implements FactoryBean<T>,
 		dataBinder.setIgnoreNestedProperties(this.ignoreNestedProperties);
 		dataBinder.setIgnoreInvalidFields(this.ignoreInvalidFields);
 		dataBinder.setIgnoreUnknownFields(this.ignoreUnknownFields);
+		// 2. 扩展点
 		customizeBinder(dataBinder);
 		if (this.applicationContext != null) {
 			ResourceEditorRegistrar resourceEditorRegistrar = new ResourceEditorRegistrar(

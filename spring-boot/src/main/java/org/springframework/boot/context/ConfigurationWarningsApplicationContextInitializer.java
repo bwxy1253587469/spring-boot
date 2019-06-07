@@ -16,16 +16,8 @@
 
 package org.springframework.boot.context;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -42,6 +34,13 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * {@link ApplicationContextInitializer} to report warnings for common misconfiguration
  * mistakes.
@@ -57,6 +56,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
+		// 向context中添加⼀一个ConfigurationWarningsPostProcessor.
 		context.addBeanFactoryPostProcessor(
 				new ConfigurationWarningsPostProcessor(getChecks()));
 	}
@@ -141,8 +141,11 @@ public class ConfigurationWarningsApplicationContextInitializer
 
 		@Override
 		public String getWarning(BeanDefinitionRegistry registry) {
+			// 1. 从BeanDefinitionRegistry中获得注解了@ComponentScan的配置值，返回那些包需要扫描
 			Set<String> scannedPackages = getComponentScanningPackages(registry);
+			// 2. 判断scannedPackages中是否存在org.springframework,org
 			List<String> problematicPackages = getProblematicPackages(scannedPackages);
+			// 3. 如果problematicPackages等于空,则返回null,否则返回message
 			if (problematicPackages.isEmpty()) {
 				return null;
 			}
@@ -155,11 +158,15 @@ public class ConfigurationWarningsApplicationContextInitializer
 		protected Set<String> getComponentScanningPackages(
 				BeanDefinitionRegistry registry) {
 			Set<String> packages = new LinkedHashSet<String>();
+			// 1. 从BeanDefinitionRegistry获得Bean definition的名字,遍历之
 			String[] names = registry.getBeanDefinitionNames();
 			for (String name : names) {
 				BeanDefinition definition = registry.getBeanDefinition(name);
+				// 2.获得对应的BeanDefinition,如果其是AnnotatedBeanDefinition的实例例
 				if (definition instanceof AnnotatedBeanDefinition) {
+					// 如果该类声明了了@ComponentScan注解,则获得@ComponentScan配置的value,basePackages,basePackageClasses
 					AnnotatedBeanDefinition annotatedDefinition = (AnnotatedBeanDefinition) definition;
+					// 添加到packages中,如果packages为空,则将当前类的包名添加到packages中
 					addComponentScanningPackages(packages,
 							annotatedDefinition.getMetadata());
 				}
@@ -171,6 +178,7 @@ public class ConfigurationWarningsApplicationContextInitializer
 				AnnotationMetadata metadata) {
 			AnnotationAttributes attributes = AnnotationAttributes.fromMap(metadata
 					.getAnnotationAttributes(ComponentScan.class.getName(), true));
+			// 添加到packages中,如果packages为空,则将当前类的包名添加到packages中
 			if (attributes != null) {
 				addPackages(packages, attributes.getStringArray("value"));
 				addPackages(packages, attributes.getStringArray("basePackages"));
@@ -195,9 +203,16 @@ public class ConfigurationWarningsApplicationContextInitializer
 			}
 		}
 
+		/**
+		 * 也就是不允许扫描org.springframework org
+		 * @param scannedPackages
+		 * @return
+		 */
 		private List<String> getProblematicPackages(Set<String> scannedPackages) {
+			// 1. 遍历scannedPackages
 			List<String> problematicPackages = new ArrayList<String>();
 			for (String scannedPackage : scannedPackages) {
+				// 1.1 如果scannedPackage等于null,或者scannedPackage等于空字符串串,或者scannedPackage等于org.springframework,org,则返回true-->加⼊入到problematicPackages中
 				if (isProblematicPackage(scannedPackage)) {
 					problematicPackages.add(getDisplayName(scannedPackage));
 				}

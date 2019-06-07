@@ -16,6 +16,14 @@
 
 package org.springframework.boot.autoconfigure.condition;
 
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,14 +36,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.annotation.Condition;
-import org.springframework.context.annotation.ConditionContext;
-import org.springframework.core.type.AnnotatedTypeMetadata;
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
 
 /**
  * Records condition evaluation details for reporting and logging.
@@ -167,13 +167,16 @@ public final class ConditionEvaluationReport {
 			ConfigurableListableBeanFactory beanFactory) {
 		synchronized (beanFactory) {
 			ConditionEvaluationReport report;
+			// 如果工厂中有bean的定义，就实例化这个bean.
 			if (beanFactory.containsSingleton(BEAN_NAME)) {
 				report = beanFactory.getBean(BEAN_NAME, ConditionEvaluationReport.class);
 			}
+			// 没有的话 就手动创建一个 并把这个bean添加进bean工厂中
 			else {
 				report = new ConditionEvaluationReport();
 				beanFactory.registerSingleton(BEAN_NAME, report);
 			}
+			// 设置相应的父属性
 			locateParent(beanFactory.getParentBeanFactory(), report);
 			return report;
 		}

@@ -82,10 +82,12 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 
 	@Override
 	public void contextLoaded(ConfigurableApplicationContext context) {
+		// 实现了ApplicationContextAware的将context设置进去
 		for (ApplicationListener<?> listener : this.application.getListeners()) {
 			if (listener instanceof ApplicationContextAware) {
 				((ApplicationContextAware) listener).setApplicationContext(context);
 			}
+			// 将springApplication中的applicationListener添加到ApplicationContext（当前是AnnotationConfigEmbeddedWebApplicationContext）
 			context.addApplicationListener(listener);
 		}
 		this.initialMulticaster.multicastEvent(

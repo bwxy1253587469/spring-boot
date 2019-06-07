@@ -63,7 +63,10 @@ public class AnnotationConfigEmbeddedWebApplicationContext
 	 * refreshed}.
 	 */
 	public AnnotationConfigEmbeddedWebApplicationContext() {
+		// 注解修饰的bean定义读取器
+		// 大部分常用的注解处理器的定义就是在这里添加进容器的
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		// classPath路径bean定义扫描器
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 

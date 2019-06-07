@@ -16,9 +16,6 @@
 
 package org.springframework.boot.context.embedded;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
@@ -30,6 +27,9 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.StringUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * {@link ApplicationContextInitializer} that sets {@link Environment} properties for the
@@ -53,6 +53,8 @@ public class ServerPortInfoApplicationContextInitializer
 
 	@Override
 	public void initialize(ConfigurableApplicationContext applicationContext) {
+		// 向applicationContext 添加一个监听.当发生EmbeddedServletContainerInitializedEvent事件时.会执
+		// ServerPortInfoApplicationContextInitializer#onApplicationEvent方法.
 		applicationContext.addApplicationListener(
 				new ApplicationListener<EmbeddedServletContainerInitializedEvent>() {
 
@@ -67,7 +69,9 @@ public class ServerPortInfoApplicationContextInitializer
 	}
 
 	protected void onApplicationEvent(EmbeddedServletContainerInitializedEvent event) {
+		// 获取名称 "local.server.port";
 		String propertyName = getPropertyName(event.getApplicationContext());
+		// 设置"local.server.port"和value的property
 		setPortProperty(event.getApplicationContext(), propertyName,
 				event.getEmbeddedServletContainer().getPort());
 	}
@@ -86,6 +90,7 @@ public class ServerPortInfoApplicationContextInitializer
 			setPortProperty(((ConfigurableApplicationContext) context).getEnvironment(),
 					propertyName, port);
 		}
+		// 递归设置父类的
 		if (context.getParent() != null) {
 			setPortProperty(context.getParent(), propertyName, port);
 		}
@@ -97,6 +102,7 @@ public class ServerPortInfoApplicationContextInitializer
 		MutablePropertySources sources = environment.getPropertySources();
 		PropertySource<?> source = sources.get("server.ports");
 		if (source == null) {
+			// 向Environment添加名为server.ports的MapPropertySource,其持有的数据为key-->local.server.port,value-->当前的端口号
 			source = new MapPropertySource("server.ports", new HashMap<String, Object>());
 			sources.addFirst(source);
 		}

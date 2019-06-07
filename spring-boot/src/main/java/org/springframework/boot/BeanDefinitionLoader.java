@@ -89,6 +89,7 @@ class BeanDefinitionLoader {
 		}
 		// 创建 ClassPathBeanDefinitionScanner 对象
 		this.scanner = new ClassPathBeanDefinitionScanner(registry);
+		// sources 不会扫描
 		this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
 	}
 
@@ -292,6 +293,12 @@ class BeanDefinitionLoader {
 		return Package.getPackage(source.toString());
 	}
 
+	/**
+	 * 1.判断是否有Component注解
+	 * 2.是否满足正则表达式
+	 * @param type
+	 * @return
+	 */
 	private boolean isComponent(Class<?> type) {
 		// This has to be a bit of a guess. The only way to be sure that this type is
 		// eligible is to make a bean definition out of it and try to instantiate it.
