@@ -134,6 +134,8 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 
 	@Override
 	protected void onRefresh() {
+		// org.springframework.web.context.support.GenericWebApplicationContext.onRefresh
+		// 初始化ThemeSource
 		super.onRefresh();
 		try {
 			// 创建web容器

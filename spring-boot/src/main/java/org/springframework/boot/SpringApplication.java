@@ -421,7 +421,7 @@ public class SpringApplication {
 		refresh(context);
 		if (this.registerShutdownHook) {
 			try {
-				// 注册⼀一个关闭容器器时的钩⼦子函数,如果registerShutdownHook 为true的话,默认是true.
+				// 注册一个关闭容器时的钩子函数,如果registerShutdownHook 为true的话,默认是true.
 				context.registerShutdownHook();
 			}
 			catch (AccessControlException ex) {

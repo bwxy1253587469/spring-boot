@@ -175,16 +175,20 @@ public class AnnotationConfigEmbeddedWebApplicationContext
 
 	@Override
 	protected void prepareRefresh() {
+		// 清空所有的bean meta 数据缓存
 		this.scanner.clearCache();
 		super.prepareRefresh();
 	}
 
 	@Override
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+		// 调用父类方法
 		super.postProcessBeanFactory(beanFactory);
+		// 扫描包名
 		if (this.basePackages != null && this.basePackages.length > 0) {
 			this.scanner.scan(this.basePackages);
 		}
+		// 扫描注解
 		if (this.annotatedClasses != null && this.annotatedClasses.length > 0) {
 			this.reader.register(this.annotatedClasses);
 		}
