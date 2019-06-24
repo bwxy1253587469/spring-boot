@@ -239,13 +239,16 @@ public class PropertiesConfigurationFactory<T> implements FactoryBean<T>,
 	}
 
 	public void bindPropertiesToTarget() throws BindException {
+		// 1.首先判断propertySources是否为null,如果为null的话,抛出异常.一般不会为null的
 		Assert.state(this.propertySources != null, "PropertySources should not be null");
 		try {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Property Sources: " + this.propertySources);
 
 			}
+			// 2. 将hasBeenBound 设为true
 			this.hasBeenBound = true;
+			// 3. 调用doBindPropertiesToTarget
 			doBindPropertiesToTarget();
 		}
 		catch (BindException ex) {
@@ -259,36 +262,47 @@ public class PropertiesConfigurationFactory<T> implements FactoryBean<T>,
 	}
 
 	private void doBindPropertiesToTarget() throws BindException {
-		// 1. 实例化
+		// 1. 初始化RelaxedDataBinder 并进行设置一下属性.
+		// target = SpringApplication.这样RelaxedDataBinder也就持有了SpringApplication
 		RelaxedDataBinder dataBinder = (this.targetName != null)
 				? new RelaxedDataBinder(this.target, this.targetName)
 				: new RelaxedDataBinder(this.target);
+		// 对于当前场景来说validator还是为null的,在 ConfigurationPropertiesBindingPostProcessor#postProcessBeforeInitialization 中,该validator为ValidatedLocalValidatorFactoryBean
 		if (this.validator != null
 				&& this.validator.supports(dataBinder.getTarget().getClass())) {
 			dataBinder.setValidator(this.validator);
 		}
 		if (this.conversionService != null) {
+			// 持有了一系列的转换器
 			dataBinder.setConversionService(this.conversionService);
 		}
 		dataBinder.setAutoGrowCollectionLimit(Integer.MAX_VALUE);
 		dataBinder.setIgnoreNestedProperties(this.ignoreNestedProperties);
 		dataBinder.setIgnoreInvalidFields(this.ignoreInvalidFields);
 		dataBinder.setIgnoreUnknownFields(this.ignoreUnknownFields);
-		// 2. 扩展点
+		// 2. 扩展点,空实现
 		customizeBinder(dataBinder);
 		if (this.applicationContext != null) {
 			ResourceEditorRegistrar resourceEditorRegistrar = new ResourceEditorRegistrar(
 					this.applicationContext, this.applicationContext.getEnvironment());
 			resourceEditorRegistrar.registerCustomEditors(dataBinder);
 		}
+		// 3. 获得relaxedTargetNames,对于当前来说,其值为-->spring.main,也就是获得@ConfigurationProperties中配置的prefix
 		Iterable<String> relaxedTargetNames = getRelaxedTargetNames();
+		// 4. 通过遍历target的属性,这里的target为SpringApplication.然后将SpringApplication的属性按照单词划分的规则,与relaxedTargetNames进行拼接
+		// 举例说明:SpringApplication中有一个logStartupInfo属性,则拆分为log-startup-info,然后与spring.main拼接为
+		// spring.main.log-startup-info 和 spring.main_log-startup-info
+		// 通过拼接生成key
 		Set<String> names = getNames(relaxedTargetNames);
+		// 5. 生成PropertyValues,此时就已经将配置文件中的占位符解析完了
 		PropertyValues propertyValues = getPropertySourcesPropertyValues(names,
 				relaxedTargetNames);
+		// 6. 调用bind,进行绑定
 		dataBinder.bind(propertyValues);
 		if (this.validator != null) {
 			dataBinder.validate();
 		}
+		// 7. 检查在绑定过程中是否出现异常,如果有的话,抛出BindException
 		checkForBindingErrors(dataBinder);
 	}
 

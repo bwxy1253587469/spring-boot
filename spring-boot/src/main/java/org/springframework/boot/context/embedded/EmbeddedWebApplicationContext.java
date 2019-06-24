@@ -169,16 +169,21 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 
 	private void createEmbeddedServletContainer() {
 		EmbeddedServletContainer localContainer = this.embeddedServletContainer;
+		// 1. 获得ServletContext
 		ServletContext localServletContext = getServletContext();
 		// <1> 如果 webServer 为空，说明未初始化
+		// 2 内置Servlet容器和ServletContext都还没初始化的时候执行
 		if (localContainer == null && localServletContext == null) {
+			// 2.1 获取自动加载的工厂
 			// <1.1> 获得 EmbeddedServletContainerFactory 对象
 			EmbeddedServletContainerFactory containerFactory = getEmbeddedServletContainerFactory();
+			// 2.2 获取Servlet初始化器并创建Servlet容器，依次调用Servlet初始化器中的onStartup方法
 			// <1.2> 获得 ServletContextInitializer 对象
 			// <1.3> 创建（获得） WebServer 对象
 			this.embeddedServletContainer = containerFactory
 					.getEmbeddedServletContainer(getSelfInitializer());
 		}
+		// 3. 内置Servlet容器已经初始化但是ServletContext还没初始化,则进行初始化.一般不会到这里
 		else if (localServletContext != null) {
 			try {
 				getSelfInitializer().onStartup(localServletContext);
@@ -188,6 +193,7 @@ public class EmbeddedWebApplicationContext extends GenericWebApplicationContext 
 						ex);
 			}
 		}
+		// 4. 初始化PropertySources
 		initPropertySources();
 	}
 

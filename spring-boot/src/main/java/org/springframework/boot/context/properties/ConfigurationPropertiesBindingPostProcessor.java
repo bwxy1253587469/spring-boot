@@ -16,14 +16,8 @@
 
 package org.springframework.boot.context.properties;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
@@ -64,6 +58,11 @@ import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link BeanPostProcessor} to bind {@link PropertySources} to beans annotated with
@@ -286,11 +285,13 @@ public class ConfigurationPropertiesBindingPostProcessor implements BeanPostProc
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName)
 			throws BeansException {
+		// 1. 获得类上的@ConfigurationProperties注解,如果注解存在,则调用postProcessBeforeInitialization 进行处理
 		ConfigurationProperties annotation = AnnotationUtils
 				.findAnnotation(bean.getClass(), ConfigurationProperties.class);
 		if (annotation != null) {
 			postProcessBeforeInitialization(bean, beanName, annotation);
 		}
+		// 2. 寻找工厂方法上是否有@ConfigurationProperties 注解,如果存在的话,则调用postProcessBeforeInitialization进行处理
 		annotation = this.beans.findFactoryAnnotation(beanName,
 				ConfigurationProperties.class);
 		if (annotation != null) {
@@ -309,25 +310,31 @@ public class ConfigurationPropertiesBindingPostProcessor implements BeanPostProc
 	private void postProcessBeforeInitialization(Object bean, String beanName,
 			ConfigurationProperties annotation) {
 		Object target = bean;
+		// 1. 实例化PropertiesConfigurationFactory,该类实现了FactoryBean, MessageSourceAware, InitializingBean 接口,并进行一些属性的设置
 		PropertiesConfigurationFactory<Object> factory = new PropertiesConfigurationFactory<Object>(
 				target);
+		// 就是ApplicationContext的environment外面包一层
 		factory.setPropertySources(this.propertySources);
 		factory.setApplicationContext(this.applicationContext);
 		factory.setValidator(determineValidator(bean));
 		// If no explicit conversion service is provided we add one so that (at least)
 		// comma-separated arrays of convertibles can be bound automatically
+		// 由于conversionService 一直为 null,因此会调用getDefaultConversionService
 		factory.setConversionService((this.conversionService != null)
 				? this.conversionService : getDefaultConversionService());
 		if (annotation != null) {
+			// 2. 如果注解存在,这是肯定的,不然也不会执行该方法,则根据@ConfigurationProperties的值进行配置
 			factory.setIgnoreInvalidFields(annotation.ignoreInvalidFields());
 			factory.setIgnoreUnknownFields(annotation.ignoreUnknownFields());
 			factory.setExceptionIfInvalid(annotation.exceptionIfInvalid());
 			factory.setIgnoreNestedProperties(annotation.ignoreNestedProperties());
 			if (StringUtils.hasLength(annotation.prefix())) {
+				// 2.1 如果配置了prefix,或者value 值,则设置TargetName
 				factory.setTargetName(annotation.prefix());
 			}
 		}
 		try {
+			// 3. 进行绑定
 			factory.bindPropertiesToTarget();
 		}
 		catch (Exception ex) {
@@ -351,21 +358,30 @@ public class ConfigurationPropertiesBindingPostProcessor implements BeanPostProc
 	}
 
 	private Validator determineValidator(Object bean) {
+		// 1. 获得validator
 		Validator validator = getValidator();
+		// 2. 如果validator不等于null并且该Validator 支持该bean的话
 		boolean supportsBean = (validator != null && validator.supports(bean.getClass()));
+		// 3 如果当前类为Validator的子类
 		if (ClassUtils.isAssignable(Validator.class, bean.getClass())) {
+			// 3.1 如果supportsBean,则实例化ChainingValidator
 			if (supportsBean) {
 				return new ChainingValidator(validator, (Validator) bean);
 			}
+			// 3.2 否则强转为Validator
 			return (Validator) bean;
 		}
+		// 4. 最后,如果supportsBean 则 返回Validator 否则 返回null
 		return (supportsBean ? validator : null);
 	}
 
 	private Validator getValidator() {
+		// 1. 由之前可知,该validator 一直都是null.
 		if (this.validator != null) {
 			return this.validator;
 		}
+		// 2. 如果localValidator 等于null并且是jsr303环境的话,则实例化ValidatedLocalValidatorFactoryBean,并赋值给localValidator,lazy-init
+		// ValidatedLocalValidatorFactoryBean 实现了ValidatorFactory, ApplicationContextAware, InitializingBean, DisposableBean,SmartValidator, javax.validation.Validator
 		if (this.localValidator == null && isJsr303Present()) {
 			this.localValidator = new ValidatedLocalValidatorFactoryBean(
 					this.applicationContext);
@@ -384,17 +400,24 @@ public class ConfigurationPropertiesBindingPostProcessor implements BeanPostProc
 	}
 
 	private ConversionService getDefaultConversionService() {
+		// 又是lazy-init 风格
+		// 1. 如果defaultConversionService 等于null,则意味着是第一次调用
 		if (this.defaultConversionService == null) {
+			// 1.1 实例化DefaultConversionService
 			DefaultConversionService conversionService = new DefaultConversionService();
+			// 1.2 调用autowireBean进行注入依赖,此时会注入converters,genericConverters
 			this.applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
+			// 1.3 遍历converters,genericConverters 依次加入到conversionService的converters中
 			for (Converter<?, ?> converter : this.converters) {
 				conversionService.addConverter(converter);
 			}
 			for (GenericConverter genericConverter : this.genericConverters) {
 				conversionService.addConverter(genericConverter);
 			}
+			// 1.4 赋值给defaultConversionService
 			this.defaultConversionService = conversionService;
 		}
+		// 2. 如果不等于null,则直接返回
 		return this.defaultConversionService;
 	}
 
