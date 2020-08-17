@@ -16,10 +16,10 @@
 
 package org.springframework.boot.actuate.health;
 
+import org.springframework.util.Assert;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.springframework.util.Assert;
 
 /**
  * {@link HealthIndicator} that returns health indications from all registered delegates.
@@ -64,9 +64,12 @@ public class CompositeHealthIndicator implements HealthIndicator {
 	@Override
 	public Health health() {
 		Map<String, Health> healths = new LinkedHashMap<String, Health>();
+		// discoveryComposite diskspace db consul hystrix
 		for (Map.Entry<String, HealthIndicator> entry : this.indicators.entrySet()) {
 			healths.put(entry.getKey(), entry.getValue().health());
 		}
+		// org.springframework.boot.actuate.health.AbstractHealthAggregator.aggregate
+		// 排序后返回第一个 优先级 Status.DOWN, Status.OUT_OF_SERVICE, Status.UP, Status.UNKNOWN
 		return this.healthAggregator.aggregate(healths);
 	}
 

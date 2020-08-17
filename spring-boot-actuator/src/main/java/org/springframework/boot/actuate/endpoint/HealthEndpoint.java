@@ -16,15 +16,15 @@
 
 package org.springframework.boot.actuate.endpoint;
 
-import java.util.Locale;
-import java.util.Map;
-
 import org.springframework.boot.actuate.health.CompositeHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthAggregator;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.Assert;
+
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * {@link Endpoint} to expose application health.
@@ -83,6 +83,7 @@ public class HealthEndpoint extends AbstractEndpoint<Health> {
 	 */
 	@Override
 	public Health invoke() {
+		// org.springframework.boot.actuate.health.CompositeHealthIndicator.health
 		return this.healthIndicator.health();
 	}
 

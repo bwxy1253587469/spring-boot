@@ -16,18 +16,6 @@
 
 package org.springframework.boot.actuate.endpoint.mvc;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.boot.actuate.endpoint.Endpoint;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
@@ -43,6 +31,17 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * {@link HandlerMapping} to map {@link Endpoint}s to URLs via {@link Endpoint#getId()}.
@@ -116,6 +115,7 @@ public abstract class AbstractEndpointHandlerMapping<E extends MvcEndpoint>
 		super.afterPropertiesSet();
 		if (!this.disabled) {
 			for (MvcEndpoint endpoint : this.endpoints) {
+				// 探测处理器方法
 				detectHandlerMethods(endpoint);
 			}
 		}
@@ -137,8 +137,10 @@ public abstract class AbstractEndpointHandlerMapping<E extends MvcEndpoint>
 		if (mapping == null) {
 			return;
 		}
+		// 获取路径匹配前缀
 		String[] patterns = getPatterns(handler, mapping);
 		if (!ObjectUtils.isEmpty(patterns)) {
+			// 注册
 			super.registerHandlerMethod(handler, method,
 					withNewPatterns(mapping, patterns));
 		}

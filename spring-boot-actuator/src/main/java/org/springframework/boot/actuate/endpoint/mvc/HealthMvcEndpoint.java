@@ -137,10 +137,12 @@ public class HealthMvcEndpoint extends AbstractEndpointMvcAdapter<HealthEndpoint
 	@ActuatorGetMapping
 	@ResponseBody
 	public Object invoke(HttpServletRequest request, Principal principal) {
+		// 用不到？
 		if (!getDelegate().isEnabled()) {
 			// Shouldn't happen because the request mapping should not be registered
 			return getDisabledResponse();
 		}
+		// 获取健康检查信息
 		Health health = getHealth(request, principal);
 		HttpStatus status = getStatus(health);
 		if (status != null) {
@@ -164,7 +166,9 @@ public class HealthMvcEndpoint extends AbstractEndpointMvcAdapter<HealthEndpoint
 	}
 
 	private Health getHealth(HttpServletRequest request, Principal principal) {
+		// 获取当前健康检查信息
 		Health currentHealth = getCurrentHealth();
+		// 判断是否需要暴露详细信息
 		if (exposeHealthDetails(request, principal)) {
 			return currentHealth;
 		}
@@ -173,8 +177,10 @@ public class HealthMvcEndpoint extends AbstractEndpointMvcAdapter<HealthEndpoint
 
 	private Health getCurrentHealth() {
 		long accessTime = System.currentTimeMillis();
+		// 判断是否有缓存 缓存是否过期
 		CachedHealth cached = this.cachedHealth;
 		if (cached == null || cached.isStale(accessTime, getDelegate().getTimeToLive())) {
+			// org.springframework.boot.actuate.endpoint.HealthEndpoint.invoke
 			Health health = getDelegate().invoke();
 			this.cachedHealth = new CachedHealth(health, accessTime);
 			return health;

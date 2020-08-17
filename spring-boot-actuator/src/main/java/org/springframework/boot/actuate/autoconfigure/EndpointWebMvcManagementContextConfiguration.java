@@ -16,10 +16,6 @@
 
 package org.springframework.boot.actuate.autoconfigure;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.audit.AuditEventRepository;
 import org.springframework.boot.actuate.condition.ConditionalOnEnabledEndpoint;
@@ -57,6 +53,10 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Configuration to expose {@link Endpoint} instances over Spring MVC.
@@ -96,8 +96,10 @@ public class EndpointWebMvcManagementContextConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	public EndpointHandlerMapping endpointHandlerMapping() {
+		// 终端处理器 扫描器
 		Set<MvcEndpoint> endpoints = mvcEndpoints().getEndpoints();
 		CorsConfiguration corsConfiguration = getCorsConfiguration(this.corsProperties);
+		// 入口org.springframework.boot.actuate.endpoint.mvc.AbstractEndpointHandlerMapping.afterPropertiesSet
 		EndpointHandlerMapping mapping = new EndpointHandlerMapping(endpoints,
 				corsConfiguration);
 		mapping.setPrefix(this.managementServerProperties.getContextPath());
@@ -162,6 +164,8 @@ public class EndpointWebMvcManagementContextConfiguration {
 	@ConditionalOnEnabledEndpoint("health")
 	public HealthMvcEndpoint healthMvcEndpoint(HealthEndpoint delegate,
 			ManagementServerProperties managementServerProperties) {
+		// 健康检查定义类 org.springframework.boot.actuate.endpoint.mvc.HealthMvcEndpoint.invoke
+		// 向EndpointHandlerMapping注册/health路径
 		HealthMvcEndpoint healthMvcEndpoint = new HealthMvcEndpoint(delegate,
 				this.managementServerProperties.getSecurity().isEnabled(),
 				managementServerProperties.getSecurity().getRoles());
